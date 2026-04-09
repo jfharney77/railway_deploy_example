@@ -49,15 +49,43 @@ The Vite dev server proxies `/hello` and `/health` to `http://localhost:8000`, s
 
 ```bash
 docker build -t my-backend ./backend
-docker run -p 8000:8000 my-backend
+docker run -p 8080:8080 -e PORT=8080 my-backend
 ```
 
 ### Frontend
 
 ```bash
-docker build -t my-frontend ./frontend
+docker build --build-arg VITE_API_BASE_URL=http://localhost:8080 -t my-frontend ./frontend
 docker run -p 3000:3000 -e PORT=3000 my-frontend
 ```
+
+---
+
+## Podman
+
+Podman is daemonless and rootless — commands mirror Docker exactly.
+
+### Both services via Podman Compose (recommended)
+
+```bash
+podman compose up --build
+```
+
+Frontend will be available at `http://localhost:3000`, backend at `http://localhost:8080`.
+
+### Individual containers
+
+```bash
+# Backend
+podman build -t my-backend ./backend
+podman run -d --name backend -p 8080:8080 -e PORT=8080 my-backend
+
+# Frontend (VITE_API_BASE_URL must be set at build time)
+podman build --build-arg VITE_API_BASE_URL=http://localhost:8080 -t my-frontend ./frontend
+podman run -d --name frontend -p 3000:3000 -e PORT=3000 my-frontend
+```
+
+> **Rootless networking note:** If running containers individually (not via compose), use `http://host.containers.internal:8080` instead of `http://localhost:8080` for `VITE_API_BASE_URL`.
 
 ---
 

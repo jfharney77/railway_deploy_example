@@ -7,6 +7,7 @@ Available skills:
 - backend_fastapi
 - frontend_react
 - railway_deploy
+- podman_deploy
 - testing
 
 General rules:

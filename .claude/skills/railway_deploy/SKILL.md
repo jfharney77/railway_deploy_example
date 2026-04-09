@@ -61,5 +61,9 @@ app.add_middleware(
 
 1. Create one service per service directory, setting **Root Directory** to `/backend` or `/frontend`
 2. Generate a public domain per service — Railway will ask for the internal port
-3. Set `VITE_API_BASE_URL` in the frontend service **Variables** tab (no port, no trailing slash)
-4. `VITE_API_BASE_URL` must be set **before** the frontend builds — it is baked into the bundle at build time
+3. Set `VITE_API_BASE_URL` in the frontend service **Variables** tab — must include `https://`, no port, no trailing slash:
+   ```
+   VITE_API_BASE_URL=https://your-backend.up.railway.app
+   ```
+   > **Common mistake:** Omitting `https://` causes the frontend to treat the URL as a relative path, resulting in requests like `https://your-frontend.up.railway.app/your-backend.up.railway.app/hello`
+4. `VITE_API_BASE_URL` must be set **before** the frontend builds — it is baked into the bundle at build time. If you update it after a build, manually trigger a redeploy from the Deployments tab.

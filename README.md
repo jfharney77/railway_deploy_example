@@ -85,6 +85,90 @@ docker run -p 3000:3000 -e PORT=3000 my-frontend
 
    > **Note:** `VITE_API_BASE_URL` is baked into the frontend bundle at build time, so it must be set before the Docker image is built. Set it as a Railway build variable.
 
+### Step-by-Step Deployment Walkthrough
+
+This documents the actual steps taken to get both services live, including gotchas encountered along the way.
+
+#### 1. Add `railway.json` to each service directory
+
+Railway defaults to Railpack, which may fail to detect the build plan. Force it to use Docker by adding a `railway.json` in both `backend/` and `frontend/`:
+
+```json
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  }
+}
+```
+
+#### 2. Set Root Directory per service in Railway
+
+When creating each Railway service, set the **Root Directory** under Source settings:
+- Backend service → `/backend`
+- Frontend service → `/frontend`
+
+Without this, Railway scans the repo root and fails to find the Dockerfile.
+
+#### 3. Commit `package-lock.json` for the frontend
+
+The frontend Dockerfile uses `npm ci`, which requires a lockfile. Generate and commit it:
+
+```bash
+cd frontend
+npm install
+git add package-lock.json
+git commit -m "Add package-lock.json"
+```
+
+#### 4. Generate public domains and set the correct port
+
+In each service → **Settings** → **Networking** → **Generate Domain**. Railway will ask for the internal port your container listens on:
+- Backend: `8080` (or whatever `PORT` is set to)
+- Frontend: `3000`
+
+The public URL has no port — Railway handles routing on its end.
+
+#### 5. Set `VITE_API_BASE_URL` on the frontend service
+
+In the frontend service → **Variables** tab, add:
+
+```
+VITE_API_BASE_URL=https://your-backend.up.railway.app
+```
+
+No trailing slash, no port number.
+
+#### 6. Add CORS middleware to the backend
+
+Without CORS, the browser blocks cross-origin requests from the frontend domain. Add to `backend/app/main.py`:
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+#### 7. Declare `VITE_API_BASE_URL` as a build arg in the frontend Dockerfile
+
+Vite bakes environment variables into the bundle at **build time**, not runtime. The Dockerfile must declare the variable explicitly:
+
+```dockerfile
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
+```
+
+Without this, `VITE_API_BASE_URL` is empty in the bundle and the frontend calls `/hello` on itself.
+
+---
+
 ### Environment Variables Summary
 
 **Backend** (Railway injects automatically)
